@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useQueue } from "@/providers/queue-provider";
 import { Image } from "@nextui-org/image";
 import {
+  CirclePause,
   ListMusicIcon,
   ListPlusIcon,
   LoaderIcon,
@@ -21,12 +22,14 @@ import { useOpenQueue } from "../hooks/use-open-queue";
 import { Toggle } from "@/components/ui/toggle";
 
 import { Slider } from "@/components/ui/slider";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Portal } from "@radix-ui/react-portal";
+
+import MobilePlayerView from "./MobilePlayerView";
+import { useAtom, useAtomValue } from "jotai";
+import { songBufferingAtom } from "@/store/jotaiStore";
+import VolumeButton from "./VolumeSlider";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { SongImage } from "@/components/ui/song-image";
+
 const PlayerView = () => {
   const {
     currentSong,
@@ -41,8 +44,7 @@ const PlayerView = () => {
     autoplay,
     setAutoplay,
   } = useQueue();
-  const LoadingSong = ["not started", "buffering"];
-  const Loading = LoadingSong.includes(playeState.toLowerCase());
+  const isBuffering = useAtomValue(songBufferingAtom);
   const { onOpen } = useOpenQueue();
   const getImage = (index?: number) =>
     currentSong?.images[index || currentSong?.images.length - 1]?.url || "";
@@ -51,7 +53,7 @@ const PlayerView = () => {
   const [value, setValue] = useState(0);
   const [dragging, SetDragging] = useState(false);
 
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const getTime = () => {
     const seconds = Math.floor(currentTime ?? 0);
@@ -84,21 +86,32 @@ const PlayerView = () => {
     };
   }, [currentTime, dragging, currentSong]);
 
-  return (
-    <div className="w-full h-[300px]">
-      <Slider
-        defaultValue={[0]}
-        value={[value]}
-        max={100}
-        step={1}
-        onValueChange={(val) => {
-          setValue(val[0]);
-          const seekTime =
-            (val[0] / 100) * (currentSong?.duration?.totalSeconds ?? 0);
-          player.seekTo(seekTime);
-        }}
-        className="w-full"
-      />
+  return isMobile ? (
+    <MobilePlayerView
+      setDragging={SetDragging}
+      setValue={setValue}
+      value={value}
+      dragging={dragging}
+    />
+  ) : (
+    <div className="w-full h-[300px]" aria-disabled={!isMobile}>
+      {!isMobile && (
+        <Slider
+          defaultValue={[0]}
+          value={[value]}
+          onDrag={() => SetDragging(true)}
+          onDragEnd={() => SetDragging(false)}
+          max={100}
+          step={1}
+          onValueChange={(val) => {
+            setValue(val[0]);
+            const seekTime =
+              (val[0] / 100) * (currentSong?.duration?.totalSeconds ?? 0);
+            player.seekTo(seekTime);
+          }}
+          className="w-full"
+        />
+      )}
       <div className="sseekbar px-1 py-2">
         <div className="flex justify-between w-full px-2">
           <div className="flex gap-2">
@@ -110,14 +123,14 @@ const PlayerView = () => {
         </div>
       </div>
       <div className="w-full px-2">
-        <div className="songInfo flex justify-between items-center ">
-          <div className="flex gap-2 itmes-center text-white">
-            <Image
-              src={getImage()}
-              width={50}
-              height={50}
-              isBlurred
-              srcSet={currentSong?.images.map((x) => x.url).join(", ")}
+        <div className="songInfo w-full items-center text-white gap-4">
+          <div className="flex gap-2 items-center songInfoItem">
+            <SongImage
+              images={currentSong?.images ?? []}
+              alt={`Album artwork for ${currentSong?.title}`}
+              width={40}
+              height={40}
+              shadow="lg"
             />
             <div className="ml-2 flex flex-col">
               <h1 className="line-clamp-1">{currentSong?.title}</h1>
@@ -126,10 +139,10 @@ const PlayerView = () => {
               </p>
             </div>
           </div>
-          <div className="flex player-actions gap-2 text-white">
+          <div className="flex justify-center player-actions gap-2 songInfoItem">
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               className="cursor-pointer"
               onClick={playPreviousSong}
             >
@@ -137,22 +150,26 @@ const PlayerView = () => {
             </Button>
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               className="cursor-pointer"
-              disabled={!currentSong || Loading}
+              disabled={!currentSong || isBuffering}
               onClick={playing ? pause : PlayCurrent}
             >
-              {Loading ? (
+              {isBuffering ? (
                 <LoaderIcon className="animate-spin w-6 h-6" />
               ) : playing ? (
-                <PauseIcon />
+                <PauseIcon
+                  strokeWidth={0.2}
+                  className="opacity-90"
+                  fill="currentColor"
+                />
               ) : (
-                <PlayIcon />
+                <PlayIcon fill="currentColor" />
               )}
             </Button>
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               className="cursor-pointer"
               onClick={playNextSong}
             >
@@ -160,12 +177,12 @@ const PlayerView = () => {
             </Button>
           </div>
           {!isMobile && (
-            <div className="flex actions gap-2 text-white">
+            <div className="flex justify-end actions gap-2 songInfoItem">
+              <div className="volume-slider">
+                <VolumeButton />
+              </div>
               <Button size="icon" variant="outline" className="cursor-pointer">
                 <ShuffleIcon />
-              </Button>
-              <Button size="icon" variant="outline" className="cursor-pointer">
-                <Volume2Icon />
               </Button>
               <Button size="icon" variant="outline" className="cursor-pointer">
                 <Repeat2Icon />

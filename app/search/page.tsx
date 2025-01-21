@@ -14,7 +14,7 @@ import { Album, Song } from "@/types/song";
 import GradualSpacing from "@/components/ui/gradual-spacing";
 function HighestRegexMatch(data: any, query: string) {
   if (!data || !data.length) return null;
-  const regex = new RegExp(query, "i");
+  const regex = new RegExp(query.toLowerCase(), "i");
 
   let highestMatch = null;
   let highestScore = 0;
@@ -30,7 +30,7 @@ function HighestRegexMatch(data: any, query: string) {
     }
   });
 
-  return highestMatch;
+  return highestMatch || data[0];
 }
 export default function HomePage() {
   const search = useSearch();
@@ -117,7 +117,6 @@ export default function HomePage() {
               <GradualSpacing
                 className="font-display text-center text-4xl font-bold -tracking-widest  text-black dark:text-white md:text-4xl md:leading-[5rem]"
                 text="Albums"
-                
               />
               <AlbumList albums={transformedAlbumsData} />
             </div>

@@ -143,12 +143,11 @@ const TopResult = ({ data, onclick }: TopResultProps) => {
       <Image
         src={filterHighQualityImage(data.images)}
         alt={data.title}
-        as={NextImage}
+        referrerPolicy='no-referrer'
         isBlurred
         isZoomed
         height={150}
         width={150}
-        srcSet={data.images.map((x) => x.url).join(", ")}
       />
       <div className="flex">
         <div className="space-y-2">

@@ -45,11 +45,13 @@ const QueueContext = createContext<{
 
 import { Song } from "@/types/song";
 import { useUser } from "@clerk/nextjs";
-import { set } from "zod";
-import { client } from "@/lib/hono";
-import { useGetAutoPlay } from "@/features/player/api/autoplay";
 import axios from "axios";
-import { PlayerAtom, queueAtom } from "@/store/jotaiStore";
+import {
+  currentSongAtom,
+  PlayerAtom,
+  queueAtom,
+  songBufferingAtom,
+} from "@/store/jotaiStore";
 export const useQueue = () => useContext(QueueContext);
 // const useSocket = useContext(SocketContext);
 interface QueueProviderProps {
@@ -61,13 +63,13 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
   const { user } = useUser();
   const [player, setPlayer] = useState<any | null>(null);
   const [queue, setQueue] = useAtom(queueAtom);
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [currentSong, setCurrentSong] = useAtom(currentSongAtom);
   const [playing, setPlaying] = useState(false);
   const [history, setHistory] = useState<Song[]>([]);
   const [playeState, setPlayerState] = useState("");
   const [currentTime, setCurrentTime] = useState(null);
   const [autoplay, setAutoplay] = useState(false);
-  const [Player, setplayer] = useAtom(PlayerAtom);
+  const [bufferig, setBuffering] = useAtom(songBufferingAtom);
   // const socket = useContext(SocketContext);
 
   const addToQueue = (song: Song, forcePlay?: boolean) => {
@@ -113,47 +115,23 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
         },
       });
       setPlayer(youtubePlayer);
-      setPlaying(true);
     }
     return () => {
       // Clean up event listeners when component unmounts
     };
   }, [player, currentSong]);
 
-  // useEffect(() => {
-  //   if (player && currentSong) {
-  //     console.log("Player state Binded");
-  //     player.on("stateChange", (e: any) => {
-  //       if (e.data == 1) {
-  //         const updateCurrentTime = async () => {
-  //           const time = await player.getCurrentTime();
-  //           const duration = await player.getDuration();
-  //           setCurrentTime(time);
-  //           requestAnimationFrame(updateCurrentTime); // Keep updating efficiently
-  //         };
-  //         requestAnimationFrame(updateCurrentTime);
-  //       }
-  //       const objectKeys = Object.keys(stateNames);
-  //       const objectValues = Object.values(stateNames);
-  //       const state = objectValues[objectKeys.indexOf(String(e.data))];
-  //       if (e.data == 0 || state.toLowerCase() == "ended") {
-  //         console.log("Song Ended");
-  //         playNextSong();
-  //       }
-
-  //       setPlayerState(state);
-  //       console.log("State Changed", state);
-  //     });
-  //   }
-  // }, [player, currentSong]);
-
   useEffect(() => {
     if (player && currentSong) {
       console.log("Player state Binded");
 
       const handleStateChange = (e: any) => {
+        if (e.data == 3 || e.data == 5 || e.data == -1) {
+          setBuffering(true);
+        }
         if (e.data === 1) {
           // Playing
+          setBuffering(false);
           setPlaying(true);
           const updateCurrentTime: any = async () => {
             const time = await player.getCurrentTime();
@@ -168,10 +146,15 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
         const objectKeys = Object.keys(stateNames);
         const objectValues = Object.values(stateNames);
         const state = objectValues[objectKeys.indexOf(String(e.data))];
-
+        if (e.data == 2) {
+          setBuffering(false);
+          setPlaying(false);
+        }
         if (e.data === 0 || state.toLowerCase() === "ended") {
           console.log("Song Ended");
           playNextSong();
+          setPlaying(false);
+          setBuffering(true);
         }
 
         setPlayerState(playing ? "Playing" : state);
@@ -219,7 +202,12 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
               url: image.url || "", // Ensure image URL is valid
             })),
           }));
-          addMultipleToQueue([...validSongs.slice(0, limit)]); // Add the new songs to the queue
+          // filter out songs that are already in the queue
+          const newSongs = validSongs.filter(
+            (song: any) => !queue.find((qSong) => qSong.id === song.id)
+          ); // Ensure image URL is valid also limit the number of songs to add
+
+          addMultipleToQueue(newSongs.slice(0, limit));
           console.log("Autoplay songs added to queue");
         }
       } catch (error) {

@@ -12,8 +12,9 @@ import { SearchProvider } from "@/components/api/use-search";
 import { NextUIProvider } from "@nextui-org/react";
 import QueueProvider from "@/providers/queue-provider";
 import { SheetsProvider } from "@/providers/sheet_provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
-const inter = Inter({ subsets: ["latin"] });
+import { ConvexWrapper } from "./convexWrapper";
+
+
 
 export const metadata: Metadata = {
   title: "Groovy Music",
@@ -26,27 +27,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-      }}
-    >
-      <html lang="en" suppressHydrationWarning={true}>
-        <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning={true}>
+      <body>
+        <ClerkProvider
+          appearance={{
+            baseTheme: dark,
+          }}
+        >
           <NextUIProvider>
-            <QueryProvider>
-                <QueueProvider>
-                  <SearchProvider>
-                    <SheetsProvider />
-                    <ThemeProvider attribute="class" defaultTheme="dark">
+            <QueryProvider> 
+              <QueueProvider>
+                <SearchProvider>
+                  <SheetsProvider />
+                  <ThemeProvider attribute="class" defaultTheme="dark">
+                    <ConvexWrapper>
                       {children}
-                    </ThemeProvider>
-                  </SearchProvider>
-                </QueueProvider>
+                    </ConvexWrapper>
+                  </ThemeProvider>
+                </SearchProvider>
+              </QueueProvider>
             </QueryProvider>
           </NextUIProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

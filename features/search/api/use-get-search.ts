@@ -1,26 +1,38 @@
 import { client } from "@/lib/hono";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-type searchTypeOptions = "album" | "playlist" | 'song';
-export const useGetSong = (keyword: string,) => {
-    const query = useQuery({
+
+export const useGetSong = (keyword: string, en?: boolean) => {
+    return useQuery({
         queryKey: ["search", keyword],
+        enabled: en ?? true,
         queryFn: async () => {
             if (!keyword) return [];
             try {
                 const res = await client.api.songs[":query"].$get({
-                    param: { query: keyword }, query: { type: 'song' }
+                    param: { query: keyword }, 
+                    query: { type: 'song' }
                 });
                 const data = await res.json();
-                return data.videos;
+                // Stabilize the data structure
+                return data.videos.map((video: any) => ({
+                    ...video,
+                    images: video.images.map((image: any) => ({
+                        url: image.url || "",
+                        size: image.size
+                    }))
+                }));
             } catch (error) {
                 console.error(error);
                 return [];
             }
         },
+        // Add staleTime to prevent unnecessary refetches
+        staleTime: 1000 * 60 * 5, // 5 minutes
     });
-    return query;
 }
+
+
 export const useGetAlbum = (keyword: string) => {
     const query = useQuery({
         queryKey: ["searchAlbum", keyword],

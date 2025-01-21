@@ -28,6 +28,7 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
       onSearch?.(query);
     }
   }, []);
+  
   return (
     <div className="relative w-full max-w-[calc(100%-4rem)]">
       <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -56,7 +57,7 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
         }}
       />
       <div className="absolute right-2.5 top-1.5 items-center text-muted-foreground flex gap-2">
-        <span>Ctrl + ,</span>
+        <span className="font-pop font-bold text-white/60">CTRL + ,</span>
       </div>
     </div>
   );
