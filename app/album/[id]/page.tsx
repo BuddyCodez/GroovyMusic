@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { SidebarLayout } from "@/layouts/sidebar-layout";
 import { useFetchAlbum } from "@/features/search/api/use-get-album";
 import Loader from "@/components/ui/loader";
-import { Image } from "@nextui-org/image";
+import { Image } from "@heroui/react";
 import { SearchBar } from "@/components/utils/search-bar";
 import { Badge } from "@/components/ui/badge";
 import { BoldIcon as ExplicitIcon } from "lucide-react";

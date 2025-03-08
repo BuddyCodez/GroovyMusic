@@ -51,8 +51,10 @@ export const createOrUpdate = mutation({
         songs: v.optional(v.array(v.any())),
         count: v.optional(v.number()),
         userId: v.string(),
+        description: v.optional(v.string()),
+        image: v.optional(v.string()),
     },
-    handler: async (ctx, { _id, name, songs, count, userId }) => {
+    handler: async (ctx, { _id, name, songs, count, userId, description, image}) => {
         // const identity = await ctx.auth.getUserIdentity();
         // console.log("identity", identity);
         // if (identity === null) {
@@ -67,13 +69,15 @@ export const createOrUpdate = mutation({
 
             }
             await ctx.db.patch(_id as Id<string>, {
-                name, songs, count, userId
+                name, songs, count, userId, description, image
             });
             console.log(" playlist Updated");
 
         } else {
             await ctx.db.insert('playlists', {
-                name, songs, count, userId
+                name, songs, count, userId, 
+                description: description || "",
+                image: image || "/placeholder.jpg",
             })
             console.log("New playlist created");
         }
@@ -90,3 +94,49 @@ export const get = query({
         return playlists;
     }
 });
+export const add = mutation({
+    args: {
+        _id: v.string(),
+        song: v.any()
+    },
+    handler: async (ctx, { _id, song }) => {
+        const playlist = await ctx.db.get(_id as Id<string>);
+        if (!playlist) {
+            throw new Error("Playlist not found");
+        }
+        // if song is already in the playlist, do not add it again
+        if (Array(playlist.song).includes(song)) {
+            return;
+        }
+        await ctx.db.patch(_id as Id<string>, {
+            songs: playlist?.songs ? [...playlist.songs, song] : [song]
+        });
+        console.log("Song added to playlist");
+    }
+});
+export const getPlaylistSongs = query({
+    args: {
+        _id: v.string()
+    },
+    handler: async ({ db }, { _id }) => {
+        const playlist = await db.get(_id as Id<string>);
+        if (!playlist) {
+            throw new Error("Playlist not found");
+        }
+        return playlist;
+    }
+});
+
+export const updatePlaylist = mutation({
+    args: {
+        _id: v.string(),
+        description: v.optional(v.string()),
+        image: v.optional(v.string()), // Base64 encoded image
+    },
+    handler: async (ctx, { _id, description, image }) => {
+        const data: { description?: string; image?: string } = {}
+        if (description !== undefined) data.description = description
+        if (image !== undefined) data.image = image
+        await ctx.db.patch(_id as Id<"playlists">, data)
+    },
+})

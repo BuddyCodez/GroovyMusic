@@ -30,7 +30,7 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
   }, []);
   
   return (
-    <div className="relative w-full max-w-[calc(100%-4rem)]">
+    <div className="relative w-full max-w-[calc(100%)] z-0">
       <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
       <Input
         placeholder="Search..."

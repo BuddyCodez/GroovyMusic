@@ -1,16 +1,34 @@
 "use client";
-import playAudio from "@/components/api/AudioPlayer";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  memo,
+} from "react";
 import YouTubePlayer from "youtube-player";
 import { atom, useAtom } from "jotai";
-const QueueContext = createContext<{
+import { Song } from "@/types/song";
+import axios from "axios";
+import {
+  currentSongAtom,
+  PlayerAtom,
+  queueAtom,
+  songBufferingAtom,
+} from "@/store/jotaiStore";
+
+// Types
+type QueueContextType = {
   queue: Song[];
   currentSong: Song | null;
+  buffering: boolean;
   addToQueue: (song: Song, forcePlay?: boolean) => void;
   addMultipleToQueue: (songs: Song[]) => void;
   removeFromQueue: () => void;
   playPreviousSong: () => void;
-  playNextSong: () => void;
+  playNextSong: (Queue?: Song[]) => void;
   playing: boolean;
   pause: () => void;
   PlayCurrent: () => void;
@@ -21,11 +39,15 @@ const QueueContext = createContext<{
   autoplay: boolean;
   setAutoplay: React.Dispatch<React.SetStateAction<boolean>>;
   setQueue: React.Dispatch<React.SetStateAction<Song[]>>;
-}>({
+  playSongsNow: (Songs: Song[]) => void;
+};
+
+// Initial values to prevent unnecessary re-creation on renders
+const INITIAL_QUEUE_CONTEXT: QueueContextType = {
   queue: [],
   currentSong: null,
-  addToQueue: (song: Song) => {},
-  addMultipleToQueue: (songs: Song[]) => {},
+  addToQueue: () => {},
+  addMultipleToQueue: () => {},
   removeFromQueue: () => {},
   playPreviousSong: () => {},
   playNextSong: () => {},
@@ -33,249 +55,448 @@ const QueueContext = createContext<{
   pause: () => {},
   PlayCurrent: () => {},
   player: null,
-  seekTo: (time: number) => {},
+  buffering: false,
+  seekTo: () => {},
   currentTime: null,
   playeState: "",
   autoplay: false,
   setAutoplay: () => {},
   setQueue: () => {},
-});
+  playSongsNow: () => {},
+};
 
-// import { SocketContext } from './SocketProvider';
+const QueueContext = createContext<QueueContextType>(INITIAL_QUEUE_CONTEXT);
 
-import { Song } from "@/types/song";
-import { useUser } from "@clerk/nextjs";
-import axios from "axios";
-import {
-  currentSongAtom,
-  PlayerAtom,
-  queueAtom,
-  songBufferingAtom,
-} from "@/store/jotaiStore";
 export const useQueue = () => useContext(QueueContext);
-// const useSocket = useContext(SocketContext);
+
 interface QueueProviderProps {
   children: React.ReactNode;
 }
 
+// Player state mapping - moved outside component to avoid recreation
+const STATE_NAMES = {
+  "-1": "Not Started",
+  0: "Ended",
+  1: "Playing",
+  2: "Paused",
+  3: "Buffering",
+  5: "Song Queued",
+};
+
 export const QueueProvider = ({ children }: QueueProviderProps) => {
-  // const { SetProgress } = useSeekbar();
-  const { user } = useUser();
-  const [player, setPlayer] = useState<any | null>(null);
+  const playerRef = useRef<any>(null);
+  const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialRender = useRef(true);
+  const isManualChange = useRef(false); // Flag to track if a change was manual or automatic
+  const currentSongIdRef = useRef<string | null>(null); // Keep track of current song ID
+
+  // Jotai atoms for global state
   const [queue, setQueue] = useAtom(queueAtom);
   const [currentSong, setCurrentSong] = useAtom(currentSongAtom);
+  const [buffering, setBuffering] = useAtom(songBufferingAtom);
+
+  // Local state
   const [playing, setPlaying] = useState(false);
   const [history, setHistory] = useState<Song[]>([]);
-  const [playeState, setPlayerState] = useState("");
-  const [currentTime, setCurrentTime] = useState(null);
+  const [playerState, setPlayerState] = useState("");
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
   const [autoplay, setAutoplay] = useState(false);
-  const [bufferig, setBuffering] = useAtom(songBufferingAtom);
-  // const socket = useContext(SocketContext);
 
-  const addToQueue = (song: Song, forcePlay?: boolean) => {
-    if (!song.id) return console.error("Song ID is required");
-    if (forcePlay) {
-      setCurrentSong(song);
-      if (playing) {
-        player.loadVideoById({ videoId: song.id });
-        player.playVideo();
-      }
-      return;
-    }
-    const toadd = {
-      ...song,
-      addedBy: user?.id ?? "Guest",
-    };
-    setQueue([...queue, toadd]);
-    if (!currentSong) {
-      setCurrentSong(toadd);
-    }
-  };
-  var stateNames = {
-    "-1": "Not Started",
-    0: "Ended",
-    1: "Playing",
-    2: "Paused",
-    3: "Buffering",
-    5: "Song Queued",
-  };
-
+  // Update the reference when current song changes
   useEffect(() => {
-    if (player && currentSong) {
-      player.loadVideoById({ videoId: currentSong.id });
-      console.log("Cued Video", currentSong.id);
+    if (currentSong) {
+      currentSongIdRef.current = currentSong.id ?? null;
+    } else {
+      currentSongIdRef.current = null;
     }
-    if (!player && currentSong && !playing) {
+  }, [currentSong]);
+
+  // Memoized handlers to prevent recreation on every render
+  const addToQueue = useCallback(
+    (song: Song, forcePlay?: boolean) => {
+      if (!song.id) {
+        console.error("Song ID is required");
+        return;
+      }
+
+      // When forcePlay is true, immediately play this song
+      if (forcePlay) {
+        isManualChange.current = true;
+        setCurrentSong(song);
+        if (playerRef.current) {
+          playerRef.current.loadVideoById({ videoId: song.id });
+          playerRef.current.playVideo();
+          setPlaying(true);
+        }
+        return;
+      }
+
+      // If no current song exists, make this the current song but DON'T play it
+      if (!currentSong) {
+        console.log("No current song, setting as current without playing");
+        setCurrentSong(song);
+        return;
+      }
+
+      // Otherwise, just add to queue - this is the critical case we need to fix
+      console.log("Adding song to queue:", song.id);
+      const songToAdd = {
+        ...song,
+        addedBy: "Guest",
+      };
+
+      // Simply add to queue without modifying current song or playing state
+      setQueue((prev) => [...prev, songToAdd]);
+    },
+    [currentSong, setCurrentSong, setQueue]
+  );
+
+  const addMultipleToQueue = useCallback(
+    (songs: Song[]) => {
+      if (!songs.length) return;
+
+      if (!currentSong) {
+        // If nothing is playing, set the first song as current and queue the rest
+        setCurrentSong(songs[0]);
+        setQueue(songs.slice(1));
+        return;
+      }
+
+      // Otherwise add all songs to queue
+      setQueue((prev) => [...prev, ...songs]);
+    },
+    [currentSong, setCurrentSong, setQueue]
+  );
+
+  const playSongsNow = useCallback(
+    (songs: Song[]) => {
+      if (!songs.length) return;
+
+      // Immediately override current song and queue
+      isManualChange.current = true;
+      setCurrentSong(songs[0]);
+      setQueue(songs.slice(1));
+
+      if (playerRef.current) {
+        playerRef.current.loadVideoById({ videoId: songs[0].id });
+        playerRef.current.playVideo();
+        setPlaying(true);
+      }
+    },
+    [setCurrentSong, setQueue]
+  );
+
+  const playPreviousSong = useCallback(() => {
+    if (!history.length) return;
+
+    const newHistory = [...history];
+    const lastSong = newHistory.pop();
+
+    if (lastSong) {
+      isManualChange.current = true;
+      // Move current song to beginning of queue if it exists
+      if (currentSong) {
+        setQueue((prev) => [currentSong, ...prev]);
+      }
+
+      setCurrentSong(lastSong);
+      setHistory(newHistory);
+
+      if (playerRef.current) {
+        playerRef.current.loadVideoById({ videoId: lastSong.id });
+        playerRef.current.playVideo();
+        setPlaying(true);
+      }
+    }
+  }, [history, currentSong, setQueue, setCurrentSong]);
+
+  const playNextSong = useCallback(
+    (providedQueue?: Song[]) => {
+      // first of all set slider value to 0
+      setCurrentTime(0);
+
+      // Get the latest queue directly from state
+      const currentQueue = queue;
+      console.log(
+        "playNextSong called, queue length:",
+        providedQueue?.length || currentQueue.length
+      );
+
+      // Use provided queue or the existing one
+      const songQueue = providedQueue ?? currentQueue;
+      console.log("Song Queue:", songQueue);
+      if (!songQueue || songQueue.length === 0) {
+        console.log("Queue is empty, stopping playback");
+        // Handle empty queue case
+        if (currentSong) {
+          // Add current song to history before clearing
+          setHistory((prev) => [...prev.filter(Boolean), currentSong]);
+        }
+
+        // Check if autoplay is enabled before stopping completely
+        if (autoplay) {
+          console.log("Autoplay is enabled, will fetch more songs soon");
+          // We'll let the autoplay effect handle this
+          // fetchAutoplaySongs(10);
+        } else {
+          setCurrentSong(null);
+          setPlaying(false);
+          playerRef.current?.stopVideo();
+        }
+        return;
+      }
+
+      // Get next song and remaining queue
+      const [nextSong, ...remainingQueue] = songQueue;
+
+      // Update history if we have a current song
+      if (currentSong) {
+        setHistory((prev) => [...prev.filter(Boolean), currentSong]);
+      }
+
+      // Update state
+      isManualChange.current = true;
+      setCurrentSong(nextSong);
+      setQueue(remainingQueue);
+
+      // Start playback if we have a player and song
+      if (playerRef.current && nextSong) {
+        console.log("Playing next song:", nextSong.title);
+        // Changed: Use loadVideoById instead of cueVideoById to force playback
+        playerRef.current.loadVideoById({ videoId: nextSong.id });
+        playerRef.current.playVideo(); // Explicitly play the video
+        setPlaying(true);
+      }
+    },
+    [queue, currentSong]
+  );
+
+  const PlayCurrent = useCallback(() => {
+    if (!playerRef.current || !currentSong) return;
+
+    playerRef.current.playVideo();
+    setPlayerState("Playing");
+    setPlaying(true);
+  }, [currentSong]);
+
+  const pause = useCallback(() => {
+    if (!playerRef.current) return;
+
+    playerRef.current.pauseVideo();
+    setPlaying(false);
+    setPlayerState("Paused");
+  }, []);
+
+  const seekTo = useCallback((time: number) => {
+    if (!playerRef.current) return;
+
+    playerRef.current.seekTo(time);
+  }, []);
+
+  // Autoplay functionality - fetch related songs when queue is empty
+  const fetchAutoplaySongs = useCallback(
+    async (limit: number = 20) => {
+      if (!autoplay || !currentSong || queue.length > 0) return;
+
+      try {
+        console.log("Fetching autoplay songs for", currentSong.id);
+        const response = await axios.get(`/api/autoplay/${currentSong.id}`);
+
+        if (response.data?.songs) {
+          // Process and clean the song data
+          const validSongs = response.data.songs.map((song: any) => ({
+            ...song,
+            images: song.images.map((image: any) => ({
+              ...image,
+              url: image.url || "",
+            })),
+          }));
+
+          // Filter out songs already in queue
+          const newSongs = validSongs
+            .filter((song: any) => !queue.find((qSong) => qSong.id === song.id))
+            .slice(0, limit);
+
+          if (newSongs.length) {
+            addMultipleToQueue(newSongs);
+            console.log("Added", newSongs.length, "autoplay songs to queue");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching autoplay songs:", error);
+      }
+    },
+    [autoplay, currentSong, queue, addMultipleToQueue]
+  );
+
+  // Handle queue loading on first render
+  useEffect(() => {
+    if (
+      (!currentSong || !playing) &&
+      queue.length > 0 &&
+      isInitialRender.current
+    ) {
+      // Queue has songs but nothing is playing, so set the first song as current
+      // but DO NOT play it automatically
+      const [firstSong, ...newQueue] = queue;
+      setCurrentSong(firstSong);
+      setQueue(newQueue);
+      console.log("[QUEUE]: Song State has been Revised after Website Load");
+      isInitialRender.current = false;
+    }
+  }, [queue, currentSong, playing, setCurrentSong, setQueue]);
+
+  // Initialize player only once
+  useEffect(() => {
+    // Only initialize the player once when we have a current song
+    if (!playerRef.current && currentSong) {
+      console.log("Initializing YouTube player with", currentSong.id);
       const youtubePlayer = YouTubePlayer("player-1", {
         videoId: currentSong.id,
         width: 0,
         height: 0,
         playerVars: {
-          autoplay: 1,
+          autoplay: isManualChange.current ? 1 : 0,
         },
       });
-      setPlayer(youtubePlayer);
+
+      playerRef.current = youtubePlayer;
+
+      // Set up state change handler
+      youtubePlayer.on("stateChange", (e) => {
+        const state = e.data;
+
+        // Handle different player states
+        switch (state) {
+          case 0: // Ended
+            console.log("Song Ended");
+            // When song ends, mark the next change as manual so it will auto-play
+            isManualChange.current = true;
+            playNextSong(queue);
+            break;
+
+          case 1: // Playing
+            console.log("Song Playing: ", currentSong.title);
+            setPlaying(true);
+            setBuffering(false);
+            setPlayerState("Playing");
+
+            // Start time tracking
+            if (timeUpdateIntervalRef.current) {
+              clearInterval(timeUpdateIntervalRef.current);
+            }
+
+            timeUpdateIntervalRef.current = setInterval(async () => {
+              const time = await youtubePlayer.getCurrentTime();
+              setCurrentTime(time);
+            }, 1000);
+            break;
+
+          case 2: // Paused
+            setPlaying(false);
+            setBuffering(false);
+            setPlayerState("Paused");
+
+            // Stop time tracking
+            if (timeUpdateIntervalRef.current) {
+              clearInterval(timeUpdateIntervalRef.current);
+              timeUpdateIntervalRef.current = null;
+            }
+            break;
+
+          case 3: // Buffering
+            setBuffering(true);
+            break;
+
+          case 5: // Video cued
+            // If a video is cued and it was a manual change, play it
+            if (isManualChange.current) {
+              youtubePlayer.playVideo();
+              isManualChange.current = false;
+            }
+            setBuffering(false);
+            break;
+
+          case -1: // Unstarted
+            // setBuffering(true);
+            setCurrentTime(0);
+            break;
+        }
+      });
     }
+
     return () => {
-      // Clean up event listeners when component unmounts
-    };
-  }, [player, currentSong]);
-
-  useEffect(() => {
-    if (player && currentSong) {
-      console.log("Player state Binded");
-
-      const handleStateChange = (e: any) => {
-        if (e.data == 3 || e.data == 5 || e.data == -1) {
-          setBuffering(true);
-        }
-        if (e.data === 1) {
-          // Playing
-          setBuffering(false);
-          setPlaying(true);
-          const updateCurrentTime: any = async () => {
-            const time = await player.getCurrentTime();
-            const duration = await player.getDuration();
-            setCurrentTime(time);
-          };
-          const intervalId = setInterval(updateCurrentTime, 1000); // Update every second
-
-          return () => clearInterval(intervalId); // Clean up interval on unmount
-        }
-
-        const objectKeys = Object.keys(stateNames);
-        const objectValues = Object.values(stateNames);
-        const state = objectValues[objectKeys.indexOf(String(e.data))];
-        if (e.data == 2) {
-          setBuffering(false);
-          setPlaying(false);
-        }
-        if (e.data === 0 || state.toLowerCase() === "ended") {
-          console.log("Song Ended");
-          playNextSong();
-          setPlaying(false);
-          setBuffering(true);
-        }
-
-        setPlayerState(playing ? "Playing" : state);
-        console.log("State Changed", state);
-      };
-
-      player.addEventListener("onStateChange", handleStateChange);
-
-      return () => {
-        // Clean up event listeners when component unmounts
-        player.removeEventListener("onStateChange", handleStateChange);
-      };
-    }
-  }, [player, playing, currentSong]);
-  useEffect(() => {
-    if (autoplay) {
-      AddAutoPlaySongs();
-    }
-  }, [queue, currentSong, autoplay]);
-  const removeFromQueue = () => {};
-  const playPreviousSong = () => {
-    const lastSong = history.pop();
-    if (lastSong) {
-      const newQueue = [currentSong, ...queue];
-      setQueue(newQueue.filter((song): song is Song => song !== null));
-      setCurrentSong(lastSong);
-      player.loadVideoById({ videoId: lastSong.id });
-    }
-  };
-  const AddAutoPlaySongs = async (limit: number = 10) => {
-    if (!autoplay) return;
-    if (queue.length > 1 || queue.length < 0) return;
-    console.log(queue.length, "Queue Length");
-    const fetchAutoplaySongs = async () => {
-      if (!currentSong) return;
-      console.log("Fetching autoplay songs for", currentSong.id);
-      try {
-        const songsData = await axios.get(`/api/autoplay/${currentSong.id}`);
-        if (songsData.data) {
-          console.log("Autoplay songs fetched:", songsData.data);
-          const validSongs = songsData.data?.songs?.map((song: any) => ({
-            ...song,
-            images: song.images.map((image: any) => ({
-              ...image,
-              url: image.url || "", // Ensure image URL is valid
-            })),
-          }));
-          // filter out songs that are already in the queue
-          const newSongs = validSongs.filter(
-            (song: any) => !queue.find((qSong) => qSong.id === song.id)
-          ); // Ensure image URL is valid also limit the number of songs to add
-
-          addMultipleToQueue(newSongs.slice(0, limit));
-          console.log("Autoplay songs added to queue");
-        }
-      } catch (error) {
-        console.error("Error fetching autoplay songs:", error);
+      if (timeUpdateIntervalRef.current) {
+        clearInterval(timeUpdateIntervalRef.current);
+        timeUpdateIntervalRef.current = null;
       }
     };
-    await fetchAutoplaySongs();
-  };
-  const addMultipleToQueue = (songs: Song[]) => {
-    if (!playing || !currentSong) {
-      setCurrentSong(songs[0]);
-      const newQueue = songs.slice(1);
-      setQueue([...newQueue]);
-      // console.log(newQueue);
-      return;
+  }, [currentSong]);
+
+  // Handle current song changes (separate from player initialization)
+  useEffect(() => {
+    // Skip if no player or no current song
+    if (!playerRef.current || !currentSong) return;
+
+    // Check if this is actually a new song (to prevent reloading the same song)
+    if (currentSongIdRef.current !== currentSong.id) {
+      console.log("Current song changed to:", currentSong.id);
+
+      // Check if this song change was triggered manually (user interaction)
+      if (isManualChange.current) {
+        console.log(
+          "Manual change detected, loading and playing video:",
+          currentSong.id
+        );
+        playerRef.current.loadVideoById({ videoId: currentSong.id });
+        playerRef.current.playVideo();
+        isManualChange.current = false; // Reset flag
+      } else {
+        console.log(
+          "Automatic change detected, just cueing video:",
+          currentSong.id
+        );
+        // Just cue the video without playing
+        playerRef.current.cueVideoById({ videoId: currentSong.id });
+      }
+
+      // Update the ref to the new song ID
+      currentSongIdRef.current = currentSong.id ?? null;
     }
-    setQueue([...queue, ...songs]);
-    // AddAutoPlaySongs();
-  };
-  const playNextSong = () => {
-    const nextSong = queue.shift();
-    const newQueue = queue.filter((song) => song.id !== nextSong?.id) || [];
-    const newHistory = [...history, currentSong].filter(
-      (song): song is Song => song !== null
-    );
-    setCurrentSong(nextSong || null);
-    if (nextSong) {
-      player.loadVideoById({ videoId: nextSong.id });
+  }, [currentSong]);
+
+  // Handle autoplay
+  useEffect(() => {
+    if (autoplay && queue.length === 0) {
+      fetchAutoplaySongs();
     }
-    setQueue(newQueue);
-    setHistory(newHistory);
+  }, [autoplay, queue.length, fetchAutoplaySongs]);
+
+  // Create a memoized context value to prevent unnecessary re-renders
+  const contextValue = {
+    queue,
+    currentSong,
+    addToQueue,
+    addMultipleToQueue,
+    removeFromQueue: () => {}, // Placeholder - not implemented in original code
+    playPreviousSong,
+    playNextSong,
+    playSongsNow,
+    playing,
+    pause,
+    PlayCurrent,
+    player: playerRef.current,
+    seekTo,
+    currentTime,
+    playeState: playerState,
+    autoplay,
+    setAutoplay,
+    setQueue,
+    buffering,
   };
 
-  const PlayCurrent = () => {
-    player && player.playVideo();
-    setPlayerState("Playing");
-    setPlaying(true);
-  };
-  const pause = () => {
-    player && player.pauseVideo();
-    setPlaying(false);
-    setPlayerState("Paused");
-  };
-  const seekTo = (time: number) => {
-    // player && socket?.emit("seekToSync", time);
-  };
   return (
-    <QueueContext.Provider
-      value={{
-        queue,
-        currentSong,
-        addToQueue,
-        removeFromQueue,
-        playPreviousSong,
-        playNextSong,
-        playing,
-        pause,
-        PlayCurrent,
-        player,
-        seekTo,
-        currentTime,
-        playeState,
-        autoplay,
-        setAutoplay,
-        addMultipleToQueue,
-        setQueue,
-      }}
-    >
+    <QueueContext.Provider value={contextValue}>
       <div
         id="player-1"
         style={{
@@ -289,4 +510,6 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
     </QueueContext.Provider>
   );
 };
-export default QueueProvider;
+
+// Use memo to prevent unnecessary re-renders when parent components update
+export default memo(QueueProvider);

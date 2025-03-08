@@ -1,13 +1,13 @@
 /* hide element #player
  */
-@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+ @import url("https://fonts.googleapis.com/css2?family=Lexend+Giga:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
 #player {
   display: none;
   visibility: hidden;
 }
 
 body {
-  font-family: "Poppins", sans-serif;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -16,10 +16,11 @@ body {
   overflow-x: hidden;
 }
 .bg-player {
-  background-color: #18181b;
+  background-color: #0b0b0c;
 }
 div[data-sidebar="content"],
-div[data-sidebar="header"], div[data-sidebar="footer"] {
+div[data-sidebar="header"],
+div[data-sidebar="footer"] {
   background-color: #0a0a0a;
 }
 .playerView {
@@ -58,6 +59,12 @@ main {
   padding-top: 50px;
   z-index: 1000;
 }
+#toaster {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 1000000000000000000000000000000000000000000;
+}
 .QueueScroll {
   overflow-y: scroll;
   padding: 0 1rem;
@@ -79,6 +86,12 @@ main {
 .imageWrapper {
   width: 100px;
   height: 100%;
+}
+.silderPopover {
+  width: 50px;
+}
+.volumeSliderWrapper {
+  height: 100px;
 }
 .topSection {
   display: flex;
@@ -170,56 +183,6 @@ main {
 div.insert-0.absolute.size-full {
   border-radius: 0px;
 }
-@media (max-width: 768px) {
-  #queue-sheet {
-    width: 100vw;
-    max-width: 100vw;
-    padding: 20px;
-    padding-top: 50px;
-  }
-  .album-content {
-    padding-left: 10px;
-    padding-right: 10px;
-    justify-content: center;
-  }
-  .topSection {
-    display: flex;
-    flex-direction: column;
-  }
-  .topSection .result,
-  .topSection .songs {
-    width: 100%;
-  }
-  .closed-sidebar {
-    max-width: 100vw;
-    overflow: hidden;
-  }
-  .mobileViewPlayer {
-    height: 90vh;
-  }
-
-  .seekbar {
-    margin-top: 10px;
-  }
-  .iconbtn {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 5px;
-    gap: 0px;
-  }
-  .iconbtn svg {
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    scale: 0.6;
-  }
-}
 
 /* SEEKBAR */
 /* === range theme and appearance === */
@@ -288,4 +251,296 @@ canvas {
 canvas {
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+}
+
+
+
+
+/* fonts  */
+.poppins-thin {
+  font-family: "Poppins", serif;
+  font-weight: 100;
+  font-style: normal;
+}
+
+.poppins-extralight {
+  font-family: "Poppins", serif;
+  font-weight: 200;
+  font-style: normal;
+}
+
+.poppins-light {
+  font-family: "Poppins", serif;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.poppins-regular {
+  font-family: "Poppins", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.poppins-medium {
+  font-family: "Poppins", serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.poppins-semibold {
+  font-family: "Poppins", serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.poppins-bold {
+  font-family: "Poppins", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.poppins-extrabold {
+  font-family: "Poppins", serif;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.poppins-black {
+  font-family: "Poppins", serif;
+  font-weight: 900;
+  font-style: normal;
+}
+
+.poppins-thin-italic {
+  font-family: "Poppins", serif;
+  font-weight: 100;
+  font-style: italic;
+}
+
+.poppins-extralight-italic {
+  font-family: "Poppins", serif;
+  font-weight: 200;
+  font-style: italic;
+}
+
+.poppins-light-italic {
+  font-family: "Poppins", serif;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.poppins-regular-italic {
+  font-family: "Poppins", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.poppins-medium-italic {
+  font-family: "Poppins", serif;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.poppins-semibold-italic {
+  font-family: "Poppins", serif;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.poppins-bold-italic {
+  font-family: "Poppins", serif;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.poppins-extrabold-italic {
+  font-family: "Poppins", serif;
+  font-weight: 800;
+  font-style: italic;
+}
+
+.poppins-black-italic {
+  font-family: "Poppins", serif;
+  font-weight: 900;
+  font-style: italic;
+}
+.lx-giga {
+  font-family: "Lexend Giga", serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-style: normal;
+}
+
+
+.header-search-wrapper {
+  width: 60%;
+}
+
+.animate-spin {
+  -webkit-animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
+}
+
+@-webkit-keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+} 
+@keyframes  spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+
+
+
+
+
+
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 12rem;
+}
+
+.slider-wrapper {
+  display: flex;
+  width: 100%;
+  touch-action: none;
+  user-select: none;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.slider-root {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 200px;
+  flex-grow: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.slider-root:active {
+  cursor: grabbing;
+}
+
+.slider-track-wrapper {
+  display: flex;
+  flex-grow: 1;
+}
+
+.slider-track {
+  position: relative;
+  height: 100%;
+  flex-grow: 1;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: rgba(128, 128, 128, 0.4);
+}
+
+.slider-range {
+  position: absolute;
+  height: 100%;
+  background-color: #888;
+  border-radius: 9999px;
+}
+
+.value-indicator {
+  color: #808080;
+  position: absolute;
+  transform: translateY(-1rem);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  color: #888;
+}
+
+.icon.dark {
+  color: #ddd;
+}
+
+
+
+
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0;
+  }
+  #queue-sheet {
+    width: 100vw;
+    max-width: 100vw;
+    padding: 20px;
+    padding-top: 50px;
+  }
+  .album-content {
+    padding-left: 10px;
+    padding-right: 10px;
+    justify-content: center;
+  }
+  .topSection {
+    display: flex;
+    flex-direction: column;
+  }
+  .topSection .result,
+  .topSection .songs {
+    width: 100%;
+  }
+  .closed-sidebar {
+    max-width: 100vw;
+    overflow: hidden;
+  }
+  .mobileViewPlayer {
+    height: 90vh;
+  }
+
+  .seekbar {
+    margin-top: 10px;
+  }
+  .iconbtn {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    gap: 0px;
+  }
+  .iconbtn svg {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    scale: 0.6;
+  }
+  .header-search-wrapper {
+    width: 80%;
+  }
 }

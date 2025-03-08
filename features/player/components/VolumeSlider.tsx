@@ -1,68 +1,99 @@
-"use client";
+"use client"
 
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Volume2, Volume1, Volume, VolumeX } from "lucide-react";
-import { useQueue } from "@/providers/queue-provider";
+import * as React from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Volume2, VolumeX, Volume1 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+// import { Slider } from "@/components/ui/slider"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Slider } from "@heroui/react"
+import { useQueue } from "@/providers/queue-provider"
 
-export default function VolumeControl() {
-  const [volume, setVolume] = useState(100);
-  const [previousVolume, setPreviousVolume] = useState(100);
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+export function VolumeControl() {
+  const [volume, setVolume] = React.useState(100)
+  const [prevVolume, setPrevVolume] = React.useState(100)
+  const [isOpen, setIsOpen] = React.useState(false)
   const { player } = useQueue();
 
-  // Handle clicking outside to close the volume slider
-  useEffect(() => {
-    if (player) {
-      player?.setVolume(volume);
-    }
-  }, [volume]);
+  const VolumeIcon = React.useMemo(() => {
+    if (volume === 0) return VolumeX
+    if (volume < 50) return Volume1
+    return Volume2
+  }, [volume])
 
-  const getVolumeIcon = () => {
-    if (volume === 0) return <VolumeX className="h-5 w-5" />;
-    if (volume < 30) return <Volume className="h-5 w-5" />;
-    if (volume < 70) return <Volume1 className="h-5 w-5" />;
-    return <Volume2 className="h-5 w-5" />;
-  };
-
-  const handleMuteToggle = () => {
+  const handleVolumeToggle = () => {
     if (volume === 0) {
-      setVolume(previousVolume);
+      setVolume(prevVolume)
     } else {
-      setPreviousVolume(volume);
-      setVolume(0);
+      setPrevVolume(volume)
+      setVolume(0)
     }
-  };
+    player?.setVolume(volume === 0 ? prevVolume : 0);
+  }
+  const handleVolumeChange = (value: number) => {
+    if (value === 0) {
+      setPrevVolume(volume)
+    }
+    setVolume(value)
+    player?.setVolume(value);
+  }
 
   return (
-    <div className="relative flex items-center justify-center gap-3">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleMuteToggle}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        className="h-10 w-10 volume-btn"
-      >
-        {getVolumeIcon()}
-      </Button>
-      {isOpen && (
-        <div
-          className="slider-div"
-          onMouseLeave={() => setIsOpen(false)}
-          onMouseEnter={() => setIsOpen(true)}
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-muted-foreground hover:text-foreground relative group"
+          onClick={handleVolumeToggle}
+          onMouseOver={() => setIsOpen(true)}
+          
         >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={volume === 0 ? "muted" : "unmuted"}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <VolumeIcon className="h-4 w-4" />
+            </motion.div>
+          </AnimatePresence>
+          <motion.div
+            className="absolute bottom-0 left-1/2 h-1 bg-primary rounded-full"
+            initial={{ width: 0 }}
+            animate={{
+              width: isOpen ? "80%" : "0%",
+            }}
+            style={{
+              translateX: "-50%",
+            }}
+          />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="center" className="silderPopover px-3 py-4"
+        onMouseOver={() => setIsOpen(true)}
+        onMouseLeave={() => {
+          setTimeout(() => { setIsOpen(false) }, 200)
+        }}
+      >
+        <div className="volumeSliderWrapper flex flex-col justify-center">
           <Slider
-            value={[volume]}
-            onValueChange={(value) => setVolume(value[0])}
-            max={100}
+            aria-label="Volume"
+            defaultValue={volume}
+            maxValue={100}
+            minValue={0}
+            orientation="vertical"
+            size="sm"
             step={1}
-            className="slider"
+            onChange={(value) => handleVolumeChange(value as number)}
+            onChangeEnd={(value) => handleVolumeChange(value as number)}
           />
         </div>
-      )}
-    </div>
-  );
+        <div className="mt-2 text-xs text-center font-medium min-w-[20px]">{volume}%</div>
+      </PopoverContent>
+    </Popover>
+  )
 }
+

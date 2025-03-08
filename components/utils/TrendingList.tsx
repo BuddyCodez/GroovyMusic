@@ -10,7 +10,7 @@ import {
   MoreVertical,
 } from "lucide-react";
 import NextImage from "next/image";
-import { Image } from "@nextui-org/image";
+import { Image } from "@heroui/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,7 @@ import { useGetSong } from "@/features/search/api/use-get-search";
 import { Skeleton } from "../ui/skeleton";
 import { useQueue } from "@/providers/queue-provider";
 import React from "react";
+import { useOpenPlaylist } from "@/features/playlist/hooks/use-open-playlist";
 
 export function TrendingSongs({ query }: { query: string }) {
   const fetcher = useGetSong(query);
@@ -54,8 +55,11 @@ export function TrendingSongs({ query }: { query: string }) {
 
   // In your JSX, memoize the SongImage component for each song
 
+  const { isOpen, onOpen } = useOpenPlaylist();
   const { addToQueue } = useQueue();
-
+  const handleAddToPlaylist = (Song: Song) => {
+    onOpen(Song);
+  }
   return (
     <div className="relative z-10">
       {/* Header */}
@@ -116,10 +120,10 @@ export function TrendingSongs({ query }: { query: string }) {
                 {trendingSongs.slice(val, val + 5).map((song: any, index) => (
                   <BlurFade delay={index * 0.1} key={song.id} className="w-[450px]">
                     <div
-                      onClick={() => addToQueue(song as Song)}
+                      onClick={() => addToQueue(song as Song, true)}
                       className="relative overflow-hidden transition-transform hover:scale-[1.02] active:scale-[0.98] group w-full cursor-pointer"
                     >
-                      <div className="flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-xl transition-colors rounded-lg">
+                      <div className="flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-xl transition-colors">
                         <Image
                           src={song.images[3].url}
                           alt={`Album artwork for ${song.title}`}
@@ -142,7 +146,7 @@ export function TrendingSongs({ query }: { query: string }) {
                             • {song.duration?.label}
                           </p>
                         </div>
-                        <Menu song={song} />
+                        <Menu song={song} handleAddToPlaylist={(Song) => handleAddToPlaylist(Song)} />
                       </div>
                     </div>
                   </BlurFade>
@@ -158,18 +162,11 @@ export function TrendingSongs({ query }: { query: string }) {
     </div >
   );
 }
-const Menu = ({ song }: { song: Song }) => {
+const Menu = ({ song, handleAddToPlaylist }: { song: Song, handleAddToPlaylist: (song: Song) => void }) => {
   const { addToQueue } = useQueue();
+
   return (
     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="cursor-pointer hover:bg-white/10"
-      >
-        <Heart className="h-4 w-4" />
-        <span className="sr-only">Like</span>
-      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -190,7 +187,9 @@ const Menu = ({ song }: { song: Song }) => {
             Add to queue
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Add to playlist</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => handleAddToPlaylist(song as Song)}
+          >Add to playlist</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

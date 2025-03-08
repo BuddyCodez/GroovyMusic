@@ -50,3 +50,20 @@ export const useGetAlbum = (keyword: string) => {
     });
     return query;
 }
+export const useGetPlaylist = (keyword: string) => {
+    return useQuery({
+        queryKey: ["searchPlaylist", keyword],
+        queryFn: async () => {
+            if (!keyword) return [];
+            try {
+                const res = await axios.get('/api/songs/' + keyword + '?type=playlist');
+                const data = await res.data;
+                // console.log("Playlist data", data.videos);
+                return data.videos;
+            } catch (error) {
+                console.error(error);
+                return [];
+            }
+        },
+    });
+}

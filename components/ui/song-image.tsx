@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { Image as NextUiImage } from '@nextui-org/react';
+import { Image as NextUiImage } from "@heroui/react";
 
 interface SongImageProps {
   images: { url: string; size: string }[];

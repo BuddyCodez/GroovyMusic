@@ -155,9 +155,6 @@ export default function DashboardPage() {
     <main>
       <SidebarLayout>
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-center">
-            <SearchBar />
-          </div>
           <header>
             <h2 className="text-white px-3 py-4 z-50 relative font-pop text-4xl font-bold ">
               Tune In to the Trends
@@ -174,13 +171,15 @@ export default function DashboardPage() {
                 opacity: 0.8,
               }}
             />
-            <TrendingSongs query="Global top songs" />
+            <section id="Trending">
+              <TrendingSongs query="Global top songs" />
+            </section>
             <header>
               <h2 className="text-white px-3 py-4 z-50 relative font-pop text-4xl font-bold ">
                 Trending Indain Songs
               </h2>
             </header>
-            <TrendingSongs query="Indian top songs" />
+            <TrendingSongs query="Indian trending songs" />
           </div>
         </div>
       </SidebarLayout>

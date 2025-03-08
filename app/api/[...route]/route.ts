@@ -4,6 +4,7 @@ import { handle } from "hono/vercel";
 import songs from "./songs"
 import albums from "./album"
 import autoplay from "./autoplay"
+import playlist from "./playlist"
 import trending from "./trending"
 import { HTTPException } from "hono/http-exception";
 
@@ -21,7 +22,8 @@ const routes = app
     .route('/songs', songs)
     .route('/albums', albums)
     .route('/autoplay', autoplay)
-    .route('/trending', trending)
+    .route('/playlist', playlist)
+    // .route('/trending', trending)
 
 
 export const GET = handle(app);

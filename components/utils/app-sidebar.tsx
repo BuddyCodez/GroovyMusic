@@ -25,91 +25,16 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { useUser } from "@clerk/nextjs";
-import { NavUser } from "./nav-user";
+
+import {NavUser} from "./nav-user";
 import { NavSecondary } from "./nav-secondary";
 import { useQueue } from "@/providers/queue-provider";
 
 // This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-
-  navMain: [
-    {
-      absolute: true,
-      title: "Home",
-      icon: Home,
-      url: "/",
-    },
-    {
-      title: "Bot",
-      url: "#",
-      icon: Bot,
-      isActive: true,
-      items: [
-        {
-          title: "About",
-          url: "#",
-        },
-        {
-          title: "Features",
-          url: "#",
-        },
-        {
-          title: "Commands",
-          url: "#",
-        },
-        {
-          title: "Invite",
-          url: "#",
-        },
-      ],
-    },
-    {
-      absolute: true,
-      title: "Guilds",
-      icon: Server,
-      url: "/guilds",
-    },
-    {
-      absolute: true,
-      title: "Profile",
-      icon: CircleUserRound,
-      url: "/profile",
-    },
-    {
-      absolute: true,
-      title: "Terms And Conditions",
-      icon: ReceiptText,
-      url: "/terms",
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
-    },
-  ],
-};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentSong } = useQueue();
-  const { user } = useUser();
-  let d = {
-    name: user?.fullName ?? "",
-    email: user?.emailAddresses[0]?.emailAddress ?? "",
-    avatar: user?.imageUrl ?? "",
-  };
+
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -135,8 +60,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain />
       </SidebarContent>
-      <SidebarFooter className={currentSong ? "mb-[80px]" : ""}>
-        <NavUser user={d} />
+      <SidebarFooter className={currentSong ? "mb-[90px]" : ""}>
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

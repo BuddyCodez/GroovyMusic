@@ -2,18 +2,15 @@ import React from "react";
 import { Play, BoldIcon as ExplicitIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Image } from "@nextui-org/react";
+import { Image } from "@heroui/react";
 import { Song } from "@/types/song";
 import { useQueue } from "@/providers/queue-provider";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import BlurFade from "@/components/ui/blur-fade";
 import AnimatedShinyText from "@/components/ui/animated-shiny-text";
 import NextImage from "next/image";
+import { useOpenPlaylist } from "@/features/playlist/hooks/use-open-playlist";
+import ContextCommandMenu from "@/components/utils/actions/context-command-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 interface MusicListProps {
   songs: Song[];
   topResult?: Song | null;
@@ -24,16 +21,13 @@ export const filterHighQualityImage = (
   index?: number
 ): string => {
   // console.log(images);
-  return images[index ?? images.length - 1].url;
+  return images[index ?? images.length - 1]?.url;
 };
 const MusicList = ({ songs, topResult }: MusicListProps) => {
   const { addToQueue } = useQueue();
   // console.log(topResult);
   return (
     <div className="container">
-      <AnimatedShinyText className="inline-flex text-4xl items-center justify-center px-4 py-1 transition ease-out hover:text-neutral-600 hover:duration-300 hover:dark:text-neutral-400 font-pop">
-        <span> Search Results</span>
-      </AnimatedShinyText>
       {/* // 2 grid  */}
       <div className="topSection">
         {topResult && (
@@ -56,75 +50,64 @@ interface SongsProps {
   onClick?: (song: Song, force?: boolean) => void;
 }
 const Songs = ({ data, length = 5, onClick }: SongsProps) => {
+  const { onOpen } = useOpenPlaylist();
   return (
     <>
       {data.slice(0, length).map((item, index) => (
-        <ContextMenu key={index}>
-          <ContextMenuTrigger>
-            <BlurFade inView delay={0.1 * index}>
-              <Card
-                className="cursor-pointer flex
+        <ContextCommandMenu key={index} onClick={() => onClick?.(item, true) ?? undefined} item={item} onOpen={() => onOpen(item)}>
+          <BlurFade inView delay={0.1 * index}>
+            <Card
+              className="cursor-pointer flex
                 broder-none border-0
               "
-                style={{
-                  width: "100%",
-                  height: "70px",
-                  maxWidth: "50%",
-                }}
-                onClick={() => {
-                  onClick?.(item, true);
-                }}
-              >
-                <CardContent className="px-1 flex items-center gap-2">
-                  <Image
-                    src={filterHighQualityImage(item.images)}
-                    alt={item.title}
-                    isBlurred
-                    isZoomed
-                    height={60}
-                    width={60}
-                    style={{
-                      minWidth: "60px",
-                      minHeight: "60px",
-                    }}
-                    srcSet={item.images.map((x) => x.url).join(", ")}
-                  />
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <h3 className="font-semibold text-md truncate text-ellipsis">
-                        {item.title}
-                      </h3>
-                      {item.isExplicit && (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs  py-1 px-1"
-                          aria-label="Explicit content"
-                        >
-                          <ExplicitIcon size={10} />
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground/75 line-clamp-1 truncate">
-                        {item.album?.name}
-                      </p>
-                    </div>
+              style={{
+                width: "100%",
+                height: "70px",
+              }}
+              onClick={() => {
+                onClick?.(item, true);
+              }}
+            >
+              <CardContent className="px-1 flex items-center gap-2 w-full">
+                <Image
+                  src={filterHighQualityImage(item.images)}
+                  alt={item.title}
+                  isBlurred
+                  isZoomed
+                  referrerPolicy='no-referrer'
+                  height={60}
+                  width={60}
+                  style={{
+                    minWidth: "60px",
+                    minHeight: "60px",
+                  }}
+                  srcSet={item.images.map((x) => x.url).join(", ")}
+                />
+                <div className="space-y-2 w-full">
+                  <div className="flex items-start gap-2">
+                    <h3 className="font-semibold text-md line-clamp-1">
+                      {item.title}
+                    </h3>
+                    {item.isExplicit && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs  py-1 px-1"
+                        aria-label="Explicit content"
+                      >
+                        <ExplicitIcon size={10} />
+                      </Badge>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </BlurFade>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem onClick={() => onClick?.(item, true)}>
-              Play
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => onClick?.(item, false)}>
-              Add to queue
-            </ContextMenuItem>
-            <ContextMenuItem>Like song</ContextMenuItem>
-            <ContextMenuItem>Share</ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
+                  <div className="space-y-1  w-full">
+                    <p className="text-xs text-muted-foreground/75 line-clamp-1">
+                      {item.album?.name}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </BlurFade>
+        </ContextCommandMenu>
       ))}
     </>
   );
@@ -152,7 +135,7 @@ const TopResult = ({ data, onclick }: TopResultProps) => {
       <div className="flex">
         <div className="space-y-2">
           <div className="flex items-start gap-2 ">
-            <h4 className="font-semibold text-lg truncate text-ellipsis">
+            <h4 className="font-semibold text-lg line-clamp-1">
               {data.title}
             </h4>
             {data.isExplicit && (
@@ -166,7 +149,7 @@ const TopResult = ({ data, onclick }: TopResultProps) => {
             )}
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground/75 line-clamp-1 truncate">
+            <p className="text-xs text-muted-foreground/75 line-clamp-1 ">
               Song • {data.artist?.map((x) => x.name).join(", ")}
             </p>
           </div>

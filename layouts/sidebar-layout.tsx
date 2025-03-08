@@ -22,6 +22,7 @@ import { AppSidebar } from "@/components/utils/app-sidebar";
 import { useQueue } from "@/providers/queue-provider";
 import PlayerView from "@/features/player/components/PlayerView";
 import { Song } from "@/types/song";
+import { SearchBar } from "@/components/utils/search-bar";
 
 // get children and props
 
@@ -59,38 +60,19 @@ export function SidebarLayout(props: {
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
-            <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 positon-fixed w-full py-2">
-              <div className="flex items-center gap-2 px-4">
+            <header
+              className="flex h-16  items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12   sticky top-0 z-10  w-full py-2 bg-background"
+              style={{
+                // background: "#0a0a0a",
+                zIndex: 12
+              }}
+            >
+              <div className="flex items-center gap-2 px-4 w-full">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    {props.isLoading && (
-                      <div className="space-y-4">
-                        <Skeleton className=" h-[2.5rem]  " />
-                      </div>
-                    )}
-                    {!props.isLoading &&
-                      breadcrumbs.map((item, index) => (
-                        <React.Fragment key={index}>
-                          <BreadcrumbItem>
-                            <Link
-                              aria-disabled={item.active}
-                              href={item.url}
-                              className={`
-                        ${item.active ? "text-white" : "text-white-200"}
-                        `}
-                            >
-                              {item?.title}
-                            </Link>
-                          </BreadcrumbItem>
-                          {index < breadcrumbs.length - 1 && (
-                            <BreadcrumbSeparator />
-                          )}
-                        </React.Fragment>
-                      ))}
-                  </BreadcrumbList>
-                </Breadcrumb>
+                <div className="header-search-wrapper">
+                  <SearchBar />
+                </div>
               </div>
             </header>
             <SidebarContent>{props.children}</SidebarContent>
