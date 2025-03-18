@@ -167,26 +167,7 @@ export default function PlayerView() {
     <div className="fixed bottom-0 left-0 right-0 bg-opacity-90 border-t border-gray-800 bg-background">
       <div className="max-w-screen-xl mx-auto p-2">
         <div className="flex flex-col items-center justify-between">
-          {/* Progress Bar */}
-          <div
-            className="absolute top-0 left-0 right-0 group cursor-pointer"
-            onMouseEnter={() => setProgressBarHover(true)}
-            onMouseLeave={() => setProgressBarHover(false)}
-          >
-            <Slider
-              value={[value]}
-              onValueChange={handleProgressClick}
-              onValueCommit={() => setDragging(false)}
-              onDrag={() => setDragging(true)}
-              max={100}
-              className={cn(
-                "absolute top-0 w-full group-hover:h-2 transition-all",
-                progressBarHover ? "h-2" : "h-1"
-              )}
-            />
-          </div>
-
-          <div className="w-full mt-4 flex items-center justify-between">
+          <div className="w-full flex items-center justify-between">
             <div className="flex space-x-4 items-center w-1/3">
               {/* Song Info - Left Side - Fixed width */}
               <div className="flex items-center space-x-3 min-w-0 gap-1">
@@ -222,49 +203,96 @@ export default function PlayerView() {
             </div>
 
             {/* Playback Controls - Center - Fixed position */}
-            <div className="flex items-center justify-center space-x-4 w-1/3">
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={playPreviousSong}
-                className="text-gray-500 hover:text-white transition"
-                aria-label="Previous"
-              >
-                <SkipBack size={20} style={{ fill: "white" }} />
-              </Button>
+            <div className="flex flex-col gap-y-2 items-center justify-center space-x-4 w-1/2">
+              <div className="flex gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setIsRepeating(!isRepeating)}
+                        className={cn(
+                          "text-white hover:text-white transition",
+                          isRepeating && "text-blue-500"
+                        )}
+                        aria-label="Repeat"
+                      >
+                        <Repeat size={20} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Repeat</TooltipContent>
+                  </Tooltip>
 
-              <Button
-                size="icon"
-                variant="secondary"
-                onClick={() => (playing ? pause() : PlayCurrent())}
-                className=" text-white hover:bg-gray-200 rounded-full h-10 w-10"
-                aria-label={playing ? "Pause" : "Play"}
-              >
-                {isBuffering ? (
-                  <LoaderCircleIcon
-                    size={20}
-                    className="animate-spin text-white"
-                  />
-                ) : playing ? (
-                  <Pause size={20} style={{ fill: "white" }} />
-                ) : (
-                  <Play
-                    size={20}
-                    className="ml-0.5"
-                    style={{ fill: "white" }}
-                  />
-                )}
-              </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={playPreviousSong}
+                    className="text-white hover:text-white transition"
+                    aria-label="Previous"
+                  >
+                    <SkipBack size={20} style={{ fill: "white" }} />
+                  </Button>
 
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => playNextSong()}
-                className="text-gray-500 hover:text-white transition"
-                aria-label="Next"
-              >
-                <SkipForward size={20} style={{ fill: "white" }} />
-              </Button>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    onClick={() => (playing ? pause() : PlayCurrent())}
+                    className=" text-white hover:bg-gray-200 rounded-full h-10 w-10"
+                    aria-label={playing ? "Pause" : "Play"}
+                  >
+                    {isBuffering ? (
+                      <LoaderCircleIcon
+                        size={20}
+                        className="animate-spin text-white"
+                      />
+                    ) : playing ? (
+                      <Pause size={20} style={{ fill: "white" }} />
+                    ) : (
+                      <Play
+                        size={20}
+                        className="ml-0.5"
+                        style={{ fill: "white" }}
+                      />
+                    )}
+                  </Button>
+
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => playNextSong()}
+                    className="text-white hover:text-white transition"
+                    aria-label="Next"
+                  >
+                    <SkipForward size={20} style={{ fill: "white" }} />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={toggleShuffle}
+                    className={cn(
+                      "text-white hover:text-white transition",
+                      isShuffling && "text-blue-500"
+                    )}
+                    aria-label="Shuffle"
+                  >
+                    <Shuffle size={20} />
+                  </Button>
+                </TooltipProvider>
+              </div>
+              <div className="slider flex items-center w-fulll gap-x-2">
+                <p>{formatTime(currentTime || 0)}</p>
+                <Slider
+                  value={[value]}
+                  onValueChange={handleProgressClick}
+                  onValueCommit={() => setDragging(false)}
+                  onDrag={() => setDragging(true)}
+                  max={100}
+                  id="song-progress-slider"
+                  className="song-audio-slider"
+                />
+                <p>{currentSong?.duration?.label || "--:--"}</p>
+              </div>
             </div>
 
             {/* Action Buttons - Right Side */}
@@ -290,18 +318,7 @@ export default function PlayerView() {
                   </TooltipTrigger>
                   <TooltipContent>Favorite</TooltipContent>
                 </Tooltip>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={toggleShuffle}
-                  className={cn(
-                    "text-gray-500 hover:text-white transition",
-                    isShuffling && "text-blue-500"
-                  )}
-                  aria-label="Shuffle"
-                >
-                  <Shuffle size={20} />
-                </Button>
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -318,24 +335,6 @@ export default function PlayerView() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Lyrics</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => setIsRepeating(!isRepeating)}
-                      className={cn(
-                        "text-gray-500 hover:text-white transition",
-                        isRepeating && "text-blue-500"
-                      )}
-                      aria-label="Repeat"
-                    >
-                      <Repeat size={20} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Repeat</TooltipContent>
                 </Tooltip>
 
                 <VolumeControl />
@@ -356,12 +355,6 @@ export default function PlayerView() {
                 </Tooltip>
               </TooltipProvider>
             </div>
-          </div>
-
-          {/* Time Display */}
-          <div className="w-full flex justify-between text-xs text-gray-400 mt-1 px-1">
-            <p>{formatTime(currentTime || 0)}</p>
-            <p>{currentSong?.duration?.label || "00:00"}</p>
           </div>
         </div>
       </div>

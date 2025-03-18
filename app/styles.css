@@ -475,8 +475,6 @@ canvas {
 }
 
 .icon {
-  width: 24px;
-  height: 24px;
   color: #888;
 }
 
@@ -484,6 +482,17 @@ canvas {
   color: #ddd;
 }
 
+
+span[role="slider"].block {
+  border: 0;
+  background-color: transparent;
+  border: none;
+}
+span[role="slider"].block:hover {
+  cursor: pointer;
+  background-color: white;
+  border-radius: 50%;
+}
 
 
 
