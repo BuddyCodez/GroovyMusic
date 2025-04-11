@@ -61,7 +61,7 @@ export function SidebarLayout(props: {
           <AppSidebar />
           <SidebarInset>
             <header
-              className="flex h-16  items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12   sticky top-0 z-10  w-full py-2 bg-background"
+              className="flex h-16  items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12  sticky top-0 z-10  w-full py-2 bg-background"
               style={{
                 // background: "#0a0a0a",
                 zIndex: 12

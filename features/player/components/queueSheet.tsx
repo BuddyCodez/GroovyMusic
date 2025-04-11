@@ -72,7 +72,9 @@ export const QueueSheet = () => {
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="flex flex-col min-w-[20vw] px-4">
+      <SheetContent className="flex flex-col min-w-[20vw] px-4" style={{
+        height: "calc(100vh - 90px)",
+      }}>
         <SheetHeader>
           <div className="flex items-center justify-between">
             <SheetTitle>Queue</SheetTitle>
@@ -101,7 +103,7 @@ export const QueueSheet = () => {
             initial="hidden"
             animate="show"
           >
-            <AnimatePresence mode="sync">
+            <AnimatePresence>
               {queue.map(
                 (song: any, index: number) =>
                   song && (
@@ -114,11 +116,9 @@ export const QueueSheet = () => {
                         x: "100%",
                         scale: 0.9,
                         transition: {
-                          type: "spring",
-                          stiffness: 400,
+                          stiffness: 200,
                           damping: 10,
-                          mass: 0.9,
-                          duration: 0.5,
+                          duration: 0.3,
                         },
                       }}
                       layout

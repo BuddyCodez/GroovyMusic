@@ -168,9 +168,9 @@ export default function PlayerView() {
       <div className="max-w-screen-xl mx-auto p-2">
         <div className="flex flex-col items-center justify-between">
           <div className="w-full flex items-center justify-between">
-            <div className="flex space-x-4 items-center w-1/3">
+            <div className="flex space-x-4 items-center player-song-info">
               {/* Song Info - Left Side - Fixed width */}
-              <div className="flex items-center space-x-3 min-w-0 gap-1">
+              <div className="flex items-center space-x-3 gap-3">
                 <div className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0">
                   {currentSong?.images ? (
                     <Image
@@ -188,7 +188,7 @@ export default function PlayerView() {
                   )}
                 </div>
 
-                <div className="min-w-0">
+                <div className="w-full">
                   <div className="truncate text-sm font-medium text-white">
                     {currentSong?.title || "No track selected"}
                   </div>
@@ -203,7 +203,12 @@ export default function PlayerView() {
             </div>
 
             {/* Playback Controls - Center - Fixed position */}
-            <div className="flex flex-col gap-y-2 items-center justify-center space-x-4 w-1/2">
+            <div
+              className="flex flex-col gap-y-2 items-center justify-center space-x-4 w-full"
+              style={{
+                padding: "0 4rem",
+              }}
+            >
               <div className="flex gap-2">
                 <TooltipProvider>
                   <Tooltip>
@@ -335,6 +340,23 @@ export default function PlayerView() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Lyrics</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setAutoplay(!autoplay)}
+                      className={cn(
+                        "text-gray-500 hover:text-white transition",
+                        autoplay && "text-blue-500"
+                      )}
+                      aria-label="Lyrics"
+                    >
+                      <ListPlus size={20} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Autoplau</TooltipContent>
                 </Tooltip>
 
                 <VolumeControl />

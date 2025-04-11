@@ -370,7 +370,9 @@ canvas {
   font-weight: 500;
   font-style: normal;
 }
-
+.player-song-info {
+  width: 33%;
+}
 
 .header-search-wrapper {
   width: 60%;

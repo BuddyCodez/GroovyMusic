@@ -111,7 +111,6 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
     }
   }, [currentSong]);
 
-  // Memoized handlers to prevent recreation on every render
   const addToQueue = useCallback(
     (song: Song, forcePlay?: boolean) => {
       if (!song.id) {
@@ -135,20 +134,142 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
       if (!currentSong) {
         console.log("No current song, setting as current without playing");
         setCurrentSong(song);
+        if (playerRef.current) {
+          playerRef.current.cueVideoById({ videoId: song.id });
+        }
         return;
       }
 
-      // Otherwise, just add to queue - this is the critical case we need to fix
-      console.log("Adding song to queue:", song.id);
+      // Otherwise, just add to queue without modifying the player
       const songToAdd = {
         ...song,
         addedBy: "Guest",
       };
 
-      // Simply add to queue without modifying current song or playing state
+      // Simply add to queue without touching the YouTube player
       setQueue((prev) => [...prev, songToAdd]);
     },
     [currentSong, setCurrentSong, setQueue]
+  );
+
+  // Add this function to handle when a video ends
+  const handleVideoEnd = useCallback(() => {
+    // Check if there are songs in the queue
+    if (queue.length > 0) {
+      // Get the next song from the queue
+      const nextSong = queue[0];
+
+      // Remove the song from the queue
+      setQueue((prev) => prev.slice(1));
+
+      // Play the next song
+      setCurrentSong(nextSong);
+      if (playerRef.current) {
+        playerRef.current.loadVideoById({ videoId: nextSong.id });
+        playerRef.current.playVideo();
+      }
+    } else {
+      // No more songs in queue
+      console.log("Queue is empty");
+      // You could implement behavior for when queue is empty
+      // like looping or stopping completely
+    }
+  }, [queue, setQueue, setCurrentSong]);
+
+  const [playHistory, setPlayHistory] = useState<Song[]>([]);
+  // Make sure to add this event listener when initializing your YouTube player
+  const setupMediaSession = useCallback(() => {
+    if ("mediaSession" in navigator) {
+      // Set metadata for what's currently playing (this will make the notification appear)
+      if (currentSong) {
+        // This will make your player show up in the notification area
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: currentSong.title || "Unknown Title",
+          artist: Array.isArray(currentSong.artist)
+            ? currentSong.artist.map((a) => a.name).join(", ")
+            : currentSong.artist || "Unknown Artist",
+          // Using YouTube thumbnail URL format
+          artwork: [
+            {
+              src:
+                currentSong.images[1].url ||
+                `https://i.ytimg.com/vi/${currentSong.id}/hqdefault.jpg`,
+              sizes: "512x512",
+              type: "image/jpeg",
+            },
+          ],
+        });
+      }
+
+      // Define action handlers for media session
+      navigator.mediaSession.setActionHandler("play", () => {
+        if (playerRef.current) {
+          playerRef.current.playVideo();
+          setPlaying(true);
+        }
+      });
+
+      navigator.mediaSession.setActionHandler("pause", () => {
+        if (playerRef.current) {
+          playerRef.current.pauseVideo();
+          setPlaying(false);
+        }
+      });
+
+      // Register next/previous handlers if we have a queue
+      if (queue.length > 0) {
+        // Next track handler - this makes the next button work
+        navigator.mediaSession.setActionHandler("nexttrack", () => {
+          playNextSong();
+        });
+      } else {
+        // If no next song, disable the button
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+      }
+
+      // Register previous handler if we have history
+      if (playHistory.length > 0) {
+        // Previous track handler - this makes the previous button work
+        navigator.mediaSession.setActionHandler("previoustrack", () => {
+          playPreviousSong();
+        });
+      } else {
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+      }
+    }
+  }, [currentSong, queue, playHistory]);
+  useEffect(() => {
+    setupMediaSession();
+
+    // Update playback state when playing state changes
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+    }
+  }, [
+    currentSong,
+    queue.length,
+    playHistory.length,
+    playing,
+    setupMediaSession,
+  ]);
+  // You'll need to track play history for previous functionality
+
+  // Modify your existing code to track play history when changing songs
+  const playNewSong = useCallback(
+    (song: any) => {
+      if (currentSong) {
+        // Add current song to history before changing
+        setPlayHistory((prev: any) => [...prev, currentSong]);
+      }
+
+      setCurrentSong(song);
+      if (playerRef.current) {
+        playerRef.current.loadVideoById({ videoId: song.id });
+        playerRef.current.playVideo();
+        setPlaying(true);
+      }
+    },
+    [currentSong, setCurrentSong]
   );
 
   const addMultipleToQueue = useCallback(
@@ -161,6 +282,14 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
         setQueue(songs.slice(1));
         return;
       }
+      // adding a promise for each song to queue it to player.
+      // This is to avoid the player from playing the song immediately
+      const queuePromises = songs.map((song) => {
+        return new Promise((resolve) => {
+          playerRef.current.cueVideoById({ videoId: song.id });
+          resolve(song);
+        });
+      });
 
       // Otherwise add all songs to queue
       setQueue((prev) => [...prev, ...songs]);
@@ -373,6 +502,7 @@ export const QueueProvider = ({ children }: QueueProviderProps) => {
             // When song ends, mark the next change as manual so it will auto-play
             isManualChange.current = true;
             playNextSong(queue);
+            handleVideoEnd(); // Call the function to handle video end
             break;
 
           case 1: // Playing
